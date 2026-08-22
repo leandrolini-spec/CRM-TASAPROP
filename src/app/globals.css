@@ -8,6 +8,14 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-navy: #17184b;
+  --color-brand-cyan: #3cc8dd;
+  --color-brand-lime: #d8e63c;
+  --color-brand-gray: #72767b;
+  --color-brand-ink: #202124;
+  --color-brand-bg: #fcfcfc;
+  --color-brand-tint: #eef8fa;
+  --font-sans: var(--font-dm-sans), Arial, Helvetica, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,5 +28,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "DM Sans", Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }

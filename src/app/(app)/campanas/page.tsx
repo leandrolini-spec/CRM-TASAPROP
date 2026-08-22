@@ -1,12 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
-import CampanasClient from "./campanas-client";
+import { getCampaigns } from "@/lib/brevo/client";
+import CampanasClient, { type CampanaBrevo } from "./campanas-client";
 
 export default async function CampanasPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("campanas_email")
-    .select("*")
-    .order("fecha", { ascending: false });
+  let campanas: CampanaBrevo[] = [];
+  let error: string | null = null;
+  try {
+    const data = await getCampaigns();
+    campanas = data.campaigns ?? [];
+  } catch (err) {
+    error = err instanceof Error ? err.message : String(err);
+  }
 
-  return <CampanasClient initial={data ?? []} />;
+  return <CampanasClient initial={campanas} initialError={error} />;
 }

@@ -2,56 +2,44 @@
 
 import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ContactoModal, { type Contacto } from "@/components/contacto-modal";
+import ContactoRowIcons from "@/components/contacto-row-icons";
+import ImportExportButtons from "@/components/import-export-buttons";
+import BrevoBulkActions from "@/components/brevo-bulk-actions";
+import BrevoListCheck from "@/components/brevo-list-check";
+import ResyncBrevoButton from "@/components/resync-brevo-button";
+import { IconTrash, IconArchive, IconUserPlus } from "@/components/icons";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Check } from "lucide-react";
 
-type Contacto = {
-  id: string;
-  inmobiliaria: string;
-  barrio: string | null;
-  telefono: string | null;
-  email: string | null;
-  instagram: string | null;
-  web: string | null;
-  fuente: string | null;
-  fecha_envio: string | null;
-  correo_enviado: boolean;
-  respondio: boolean;
-  interesado: boolean | null;
-  reunion: boolean;
-  baja: boolean;
-  estado: string;
-  notas: string | null;
-};
-
-const ESTADOS = [
-  "Pendiente",
-  "Enviado",
-  "Respondió",
-  "Interesado",
-  "Reunión",
-  "No interesado",
-  "Baja",
-];
-
-const ESTADO_COLOR: Record<string, string> = {
-  Pendiente: "bg-yellow-50",
-  Enviado: "bg-green-50",
-  Respondió: "bg-green-50",
-  Interesado: "bg-green-50",
-  Reunión: "bg-green-50",
-  "No interesado": "bg-red-50",
-  Baja: "bg-red-50",
-};
-
-export default function ContactosClient({ initial }: { initial: Contacto[] }) {
+export default function ContactosClient({
+  initial,
+  derivados,
+}: {
+  initial: Contacto[];
+  derivados: string[];
+}) {
   const supabase = createClient();
   const [contactos, setContactos] = useState<Contacto[]>(initial);
+  const [convertidos, setConvertidos] = useState<Set<string>>(new Set(derivados));
   const [filtroBarrio, setFiltroBarrio] = useState("");
+  const [filtroInmobiliaria, setFiltroInmobiliaria] = useState("");
+  const [verArchivados, setVerArchivados] = useState(false);
+  const [orden, setOrden] = useState<"" | "alfabetico" | "barrio">("");
+  const [contactoAbierto, setContactoAbierto] = useState<Contacto | null>(null);
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [emailsEnLista, setEmailsEnLista] = useState<Set<string> | null>(null);
   const [nuevo, setNuevo] = useState({
     inmobiliaria: "",
     barrio: "",
     email: "",
     telefono: "",
+    instagram: "",
+    web: "",
     fuente: "",
+    notas: "",
   });
   const [guardando, setGuardando] = useState(false);
 
@@ -72,178 +60,351 @@ export default function ContactosClient({ initial }: { initial: Contacto[] }) {
       barrio: nuevo.barrio || null,
       email: nuevo.email || null,
       telefono: nuevo.telefono || null,
+      instagram: nuevo.instagram || null,
+      web: nuevo.web || null,
       fuente: nuevo.fuente || null,
+      notas: nuevo.notas || null,
     });
-    setNuevo({ inmobiliaria: "", barrio: "", email: "", telefono: "", fuente: "" });
+    if (nuevo.email) {
+      fetch("/api/brevo/sync-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: nuevo.email,
+          inmobiliaria: nuevo.inmobiliaria,
+          barrio: nuevo.barrio || null,
+          telefono: nuevo.telefono || null,
+        }),
+      }).catch(() => {});
+    }
+    setNuevo({
+      inmobiliaria: "",
+      barrio: "",
+      email: "",
+      telefono: "",
+      instagram: "",
+      web: "",
+      fuente: "",
+      notas: "",
+    });
     setGuardando(false);
     cargar();
   }
 
-  async function actualizarEstado(id: string, estado: string) {
-    setContactos((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, estado } : c))
-    );
-    await supabase.from("contactos").update({ estado }).eq("id", id);
+  async function derivarACliente(e: React.MouseEvent, contacto: Contacto) {
+    e.stopPropagation();
+    if (convertidos.has(contacto.id)) {
+      alert("Este contacto ya fue derivado a Pruebas / Alianzas.");
+      return;
+    }
+    setConvertidos((prev) => new Set(prev).add(contacto.id));
+    await supabase.from("clientes").insert({
+      nombre: contacto.inmobiliaria,
+      email: contacto.email,
+      tipo: "inmobiliaria",
+      contacto_id: contacto.id,
+      notas: `Derivado desde Contactos${contacto.barrio ? ` (${contacto.barrio})` : ""}`,
+    });
   }
 
-  async function actualizarBooleano(
-    id: string,
-    campo: "correo_enviado" | "respondio" | "reunion" | "baja",
-    valor: boolean
-  ) {
-    setContactos((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, [campo]: valor } : c))
-    );
-    await supabase.from("contactos").update({ [campo]: valor }).eq("id", id);
+  async function archivarRapido(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    await supabase.from("contactos").update({ archivado: true }).eq("id", id);
+    cargar();
   }
 
-  const filtrados = filtroBarrio
-    ? contactos.filter((c) =>
-        c.barrio?.toLowerCase().includes(filtroBarrio.toLowerCase())
+  async function desarchivarRapido(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    await supabase.from("contactos").update({ archivado: false }).eq("id", id);
+    cargar();
+  }
+
+  async function eliminarRapido(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    if (!confirm("¿Eliminar este contacto definitivamente? No se puede deshacer.")) return;
+    await supabase.from("contactos").delete().eq("id", id);
+    cargar();
+  }
+
+  function toggleSeleccion(id: string) {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const archivados = contactos.filter((c) => c.archivado);
+  const visibles = contactos
+    .filter((c) => {
+      if (!verArchivados && c.archivado) return false;
+      if (verArchivados && !c.archivado) return false;
+      if (filtroBarrio && !c.barrio?.toLowerCase().includes(filtroBarrio.toLowerCase()))
+        return false;
+      if (
+        filtroInmobiliaria &&
+        !c.inmobiliaria.toLowerCase().includes(filtroInmobiliaria.toLowerCase())
       )
-    : contactos;
+        return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (orden === "alfabetico") return a.inmobiliaria.localeCompare(b.inmobiliaria);
+      if (orden === "barrio")
+        return (a.barrio ?? "").localeCompare(b.barrio ?? "") || a.inmobiliaria.localeCompare(b.inmobiliaria);
+      return 0;
+    });
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#17184B]">Contactos</h1>
-        <p className="text-sm text-[#72767B]">
-          Reemplaza la solapa &ldquo;Contactos&rdquo; del Excel. La fila se
-          colorea sola según el Estado, igual que antes.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-brand-navy">Contactos</h1>
+          <p className="text-sm text-brand-gray">
+            Agenda de inmobiliarias. El seguimiento comercial se maneja en Seguimiento.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <ResyncBrevoButton />
+          <ImportExportButtons entity="contactos" onImported={cargar} />
+        </div>
       </div>
 
-      <form
+      <Card
+        as="form"
         onSubmit={agregarContacto}
-        className="bg-white rounded-xl border p-4 grid grid-cols-1 md:grid-cols-6 gap-3"
+        className="p-4 grid grid-cols-1 md:grid-cols-4 gap-3"
       >
         <input
-          className="border rounded-lg px-3 py-2 text-sm md:col-span-2"
+          className="border rounded-lg px-3 py-2 text-sm md:col-span-2 focus:outline-none focus:ring-2 focus:ring-brand-cyan"
           placeholder="Inmobiliaria *"
           value={nuevo.inmobiliaria}
           onChange={(e) => setNuevo({ ...nuevo, inmobiliaria: e.target.value })}
           required
         />
         <input
-          className="border rounded-lg px-3 py-2 text-sm"
-          placeholder="Barrio"
+          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
+          placeholder="Localidad"
           value={nuevo.barrio}
           onChange={(e) => setNuevo({ ...nuevo, barrio: e.target.value })}
         />
         <input
-          className="border rounded-lg px-3 py-2 text-sm"
+          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
+          placeholder="Fuente (ej. Búsqueda web)"
+          value={nuevo.fuente}
+          onChange={(e) => setNuevo({ ...nuevo, fuente: e.target.value })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
           placeholder="Email"
           value={nuevo.email}
           onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })}
         />
         <input
-          className="border rounded-lg px-3 py-2 text-sm"
+          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
           placeholder="Teléfono/WhatsApp"
           value={nuevo.telefono}
           onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })}
         />
-        <button
-          type="submit"
-          disabled={guardando}
-          className="rounded-lg bg-[#17184B] text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
-        >
-          {guardando ? "Agregando..." : "+ Agregar"}
-        </button>
-      </form>
+        <input
+          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
+          placeholder="Instagram (@usuario)"
+          value={nuevo.instagram}
+          onChange={(e) => setNuevo({ ...nuevo, instagram: e.target.value })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
+          placeholder="Web"
+          value={nuevo.web}
+          onChange={(e) => setNuevo({ ...nuevo, web: e.target.value })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2 text-sm md:col-span-3 focus:outline-none focus:ring-2 focus:ring-brand-cyan"
+          placeholder="Notas"
+          value={nuevo.notas}
+          onChange={(e) => setNuevo({ ...nuevo, notas: e.target.value })}
+        />
+        <Button type="submit" disabled={guardando} className="md:col-span-4">
+          {guardando ? "Agregando..." : "+ Agendar contacto"}
+        </Button>
+      </Card>
 
-      <input
-        className="border rounded-lg px-3 py-2 text-sm w-full max-w-xs"
-        placeholder="Filtrar por barrio..."
-        value={filtroBarrio}
-        onChange={(e) => setFiltroBarrio(e.target.value)}
-      />
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs text-brand-gray mb-1">Localidad</label>
+          <input
+            className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
+            placeholder="Filtrar por localidad..."
+            value={filtroBarrio}
+            onChange={(e) => setFiltroBarrio(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-brand-gray mb-1">Inmobiliaria</label>
+          <input
+            className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
+            placeholder="Filtrar por nombre..."
+            value={filtroInmobiliaria}
+            onChange={(e) => setFiltroInmobiliaria(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-brand-gray mb-1">Ordenar por</label>
+          <select
+            className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-cyan"
+            value={orden}
+            onChange={(e) => setOrden(e.target.value as "" | "alfabetico" | "barrio")}
+          >
+            <option value="">Más recientes</option>
+            <option value="alfabetico">Alfabético (A-Z)</option>
+            <option value="barrio">Localidad</option>
+          </select>
+        </div>
+        <BrevoListCheck onEmailsChange={setEmailsEnLista} />
+        {archivados.length > 0 && (
+          <button
+            onClick={() => setVerArchivados((v) => !v)}
+            className="text-sm text-brand-gray hover:text-brand-navy underline pb-2"
+          >
+            {verArchivados ? "Ver activos" : `Ver archivados (${archivados.length})`}
+          </button>
+        )}
+      </div>
 
-      <div className="bg-white rounded-xl border overflow-x-auto">
+      {seleccionados.size > 0 && (
+        <BrevoBulkActions
+          selectedIds={[...seleccionados]}
+          onDone={() => setSeleccionados(new Set())}
+          onEmailsEnListaChange={setEmailsEnLista}
+        />
+      )}
+
+      <Card className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-[#72767B] border-b">
+            <tr className="text-left text-brand-gray border-b bg-gray-50/60">
+              <th className="px-3 py-2 w-8">
+                <input
+                  type="checkbox"
+                  checked={visibles.length > 0 && visibles.every((c) => seleccionados.has(c.id))}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSeleccionados(new Set(visibles.map((c) => c.id)));
+                    } else {
+                      setSeleccionados(new Set());
+                    }
+                  }}
+                />
+              </th>
               <th className="px-3 py-2">Inmobiliaria</th>
-              <th className="px-3 py-2">Barrio</th>
               <th className="px-3 py-2">Contacto</th>
-              <th className="px-3 py-2">Enviado</th>
-              <th className="px-3 py-2">Respondió</th>
-              <th className="px-3 py-2">Reunión</th>
-              <th className="px-3 py-2">Baja</th>
-              <th className="px-3 py-2">Estado</th>
+              <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody>
-            {filtrados.length === 0 && (
+            {visibles.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-[#72767B]">
-                  Sin contactos todavía.
+                <td colSpan={4} className="px-3 py-6 text-center text-brand-gray">
+                  Sin contactos.
                 </td>
               </tr>
             )}
-            {filtrados.map((c) => (
+            {visibles.map((c) => (
               <tr
                 key={c.id}
-                className={`border-b last:border-0 ${ESTADO_COLOR[c.estado] ?? ""}`}
+                onClick={() => setContactoAbierto(c)}
+                className="border-b last:border-0 cursor-pointer hover:bg-brand-cyan/5"
               >
-                <td className="px-3 py-2 font-medium">{c.inmobiliaria}</td>
-                <td className="px-3 py-2">{c.barrio ?? "-"}</td>
-                <td className="px-3 py-2 text-[#72767B]">
-                  {c.email ?? c.telefono ?? "-"}
-                </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
-                    checked={c.correo_enviado}
-                    onChange={(e) =>
-                      actualizarBooleano(c.id, "correo_enviado", e.target.checked)
-                    }
+                    checked={seleccionados.has(c.id)}
+                    onChange={() => toggleSeleccion(c.id)}
+                  />
+                </td>
+                <td className="px-3 py-2 font-medium">
+                  {c.inmobiliaria}
+                  {c.barrio && (
+                    <span className="ml-2 text-xs font-normal text-brand-gray">
+                      {c.barrio}
+                    </span>
+                  )}
+                  {emailsEnLista && c.email && emailsEnLista.has(c.email.toLowerCase()) && (
+                    <Badge tone="green" className="ml-2">
+                      <Check size={11} /> en lista
+                    </Badge>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  <ContactoRowIcons
+                    telefono={c.telefono}
+                    email={c.email}
+                    instagram={c.instagram}
+                    web={c.web}
                   />
                 </td>
                 <td className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={c.respondio}
-                    onChange={(e) =>
-                      actualizarBooleano(c.id, "respondio", e.target.checked)
-                    }
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={c.reunion}
-                    onChange={(e) =>
-                      actualizarBooleano(c.id, "reunion", e.target.checked)
-                    }
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={c.baja}
-                    onChange={(e) =>
-                      actualizarBooleano(c.id, "baja", e.target.checked)
-                    }
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <select
-                    value={c.estado}
-                    onChange={(e) => actualizarEstado(c.id, e.target.value)}
-                    className="border rounded-md px-2 py-1 text-xs bg-white"
-                  >
-                    {ESTADOS.map((estado) => (
-                      <option key={estado} value={estado}>
-                        {estado}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="inline-flex items-center gap-3 justify-end w-full">
+                    <button
+                      onClick={(e) => derivarACliente(e, c)}
+                      title={
+                        convertidos.has(c.id)
+                          ? "Ya es cliente (Pruebas / Alianzas)"
+                          : "Derivar a Pruebas / Alianzas"
+                      }
+                      className={
+                        convertidos.has(c.id)
+                          ? "text-green-600"
+                          : "text-brand-gray hover:text-brand-navy"
+                      }
+                    >
+                      <IconUserPlus width={16} height={16} />
+                    </button>
+                    {c.archivado ? (
+                      <button
+                        onClick={(e) => desarchivarRapido(e, c.id)}
+                        title="Restaurar a activos"
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <IconArchive width={16} height={16} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => archivarRapido(e, c.id)}
+                        title="Archivar"
+                        className="text-brand-gray hover:text-brand-navy"
+                      >
+                        <IconArchive width={16} height={16} />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => eliminarRapido(e, c.id)}
+                      title="Eliminar"
+                      className="text-brand-gray hover:text-red-600"
+                    >
+                      <IconTrash width={16} height={16} />
+                    </button>
+                  </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
+
+      {contactoAbierto && (
+        <ContactoModal
+          contacto={contactoAbierto}
+          onClose={() => setContactoAbierto(null)}
+          onChanged={() => {
+            setContactoAbierto(null);
+            cargar();
+          }}
+          mostrarFunnel={false}
+          mostrarArchivar={!contactoAbierto.archivado}
+        />
+      )}
     </div>
   );
 }
