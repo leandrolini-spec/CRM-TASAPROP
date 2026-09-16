@@ -27,6 +27,7 @@ export default function ContactosClient({
   const [filtroBarrio, setFiltroBarrio] = useState("");
   const [filtroInmobiliaria, setFiltroInmobiliaria] = useState("");
   const [verArchivados, setVerArchivados] = useState(false);
+  const [verIncompletos, setVerIncompletos] = useState(false);
   const [orden, setOrden] = useState<"" | "alfabetico" | "barrio">("");
   const [contactoAbierto, setContactoAbierto] = useState<Contacto | null>(null);
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
@@ -136,10 +137,19 @@ export default function ContactosClient({
   }
 
   const archivados = contactos.filter((c) => c.archivado);
+  // "Completo" = tiene email y teléfono. Los incompletos no entran a la lista
+  // activa por defecto (mismo criterio que se usa para decidir a quién se le
+  // puede escribir/llamar); se pueden revisar aparte con el toggle de abajo.
+  const esCompleto = (c: Contacto) => !!c.email && !!c.telefono;
+  const incompletos = contactos.filter((c) => !c.archivado && !esCompleto(c));
   const visibles = contactos
     .filter((c) => {
-      if (!verArchivados && c.archivado) return false;
-      if (verArchivados && !c.archivado) return false;
+      if (verArchivados) return c.archivado;
+      if (c.archivado) return false;
+      if (verIncompletos) return !esCompleto(c);
+      return esCompleto(c);
+    })
+    .filter((c) => {
       if (filtroBarrio && !c.barrio?.toLowerCase().includes(filtroBarrio.toLowerCase()))
         return false;
       if (
@@ -268,6 +278,15 @@ export default function ContactosClient({
             className="text-sm text-brand-gray hover:text-brand-navy underline pb-2"
           >
             {verArchivados ? "Ver activos" : `Ver archivados (${archivados.length})`}
+          </button>
+        )}
+        {!verArchivados && incompletos.length > 0 && (
+          <button
+            onClick={() => setVerIncompletos((v) => !v)}
+            className="text-sm text-brand-gray hover:text-brand-navy underline pb-2"
+            title="Contactos activos a los que les falta email o teléfono"
+          >
+            {verIncompletos ? "Ver completos" : `Ver incompletos (${incompletos.length})`}
           </button>
         )}
       </div>

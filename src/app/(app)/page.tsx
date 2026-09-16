@@ -147,7 +147,7 @@ export default async function DashboardPage() {
           <p className="text-2xl font-bold text-brand-navy">
             ${totalGastos.ARS.toLocaleString("es-AR")}
           </p>
-          <p className="text-sm text-brand-gray">
+          <p className="text-2xl font-bold text-brand-gray">
             u$s{totalGastos.USD.toLocaleString("en-US")}
           </p>
         </Card>

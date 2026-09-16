@@ -161,16 +161,34 @@ export default function Sidebar({ profile }: { profile: Profile }) {
 
           if (colapsadoUi) {
             return (
-              <Link
-                key={entry.label}
-                href={entry.href ?? entry.items[0].href}
-                prefetch={false}
-                title={entry.label}
-                onClick={() => setMobileAbierto(false)}
-                className={`${linkClass(headerActivo)} justify-center px-0`}
-              >
-                <HeaderIcon size={18} className="shrink-0 text-brand-lime" />
-              </Link>
+              <div key={entry.label} className="space-y-1">
+                {entry.href && (
+                  <Link
+                    href={entry.href}
+                    prefetch={false}
+                    title={entry.label}
+                    onClick={() => setMobileAbierto(false)}
+                    className={`${linkClass(headerActivo)} justify-center px-0`}
+                  >
+                    <HeaderIcon size={18} className="shrink-0 text-brand-lime" />
+                  </Link>
+                )}
+                {entry.items.map((item) => {
+                  const ItemIcon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      prefetch={false}
+                      title={item.label}
+                      onClick={() => setMobileAbierto(false)}
+                      className={`${linkClass(pathname.startsWith(item.href))} justify-center px-0`}
+                    >
+                      <ItemIcon size={18} className="shrink-0 text-brand-lime" />
+                    </Link>
+                  );
+                })}
+              </div>
             );
           }
 

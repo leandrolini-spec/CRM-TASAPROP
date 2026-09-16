@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { X } from "lucide-react";
+import { X, UserPlus, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatFechaCorta } from "@/lib/date";
 
@@ -10,6 +10,7 @@ type Cliente = {
   nombre: string;
   empresa: string | null;
   email: string | null;
+  telefono: string | null;
   dominio: string | null;
   tipo: "individual" | "inmobiliaria";
   descuento_pct: number;
@@ -18,6 +19,10 @@ type Cliente = {
   notas: string | null;
   categoria: string | null;
   estado: "Alianza" | "Prueba" | "Seguimiento" | "Descartado";
+  // OJO: distinto de contacto_id (que usan Contactos/Seguimiento para marcar
+  // "este cliente fue derivado DESDE ese contacto"). Este es el sentido
+  // inverso: "este cliente fue migrado HACIA este contacto nuevo".
+  contacto_derivado_id: string | null;
 };
 
 const ESTADOS = ["Alianza", "Prueba", "Seguimiento", "Descartado"] as const;
@@ -33,6 +38,7 @@ const CLIENTE_VACIO = {
   nombre: "",
   empresa: "",
   email: "",
+  telefono: "",
   dominio: "",
   tipo: "individual" as "individual" | "inmobiliaria",
   descuento_pct: "0",
@@ -51,6 +57,7 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
     nombre: "",
     empresa: "",
     email: "",
+    telefono: "",
     tipo: "individual" as "individual" | "inmobiliaria",
     fecha_vencimiento: "",
   });
@@ -60,6 +67,7 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
   const [clienteAbierto, setClienteAbierto] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(CLIENTE_VACIO);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [migrandoId, setMigrandoId] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase
@@ -77,11 +85,19 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
       nombre: nuevo.nombre,
       empresa: nuevo.empresa || null,
       email: nuevo.email || null,
+      telefono: nuevo.telefono || null,
       tipo: nuevo.tipo,
       fecha_inicio_prueba: new Date().toISOString().slice(0, 10),
       fecha_vencimiento: nuevo.fecha_vencimiento || null,
     });
-    setNuevo({ nombre: "", empresa: "", email: "", tipo: "individual", fecha_vencimiento: "" });
+    setNuevo({
+      nombre: "",
+      empresa: "",
+      email: "",
+      telefono: "",
+      tipo: "individual",
+      fecha_vencimiento: "",
+    });
     setGuardando(false);
     cargar();
   }
@@ -92,6 +108,7 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
       nombre: c.nombre,
       empresa: c.empresa ?? "",
       email: c.email ?? "",
+      telefono: c.telefono ?? "",
       dominio: c.dominio ?? "",
       tipo: c.tipo,
       descuento_pct: String(c.descuento_pct),
@@ -113,6 +130,7 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
         nombre: editForm.nombre,
         empresa: editForm.empresa || null,
         email: editForm.email || null,
+        telefono: editForm.telefono || null,
         dominio: editForm.dominio || null,
         tipo: editForm.tipo,
         descuento_pct: Number(editForm.descuento_pct) || 0,
@@ -141,6 +159,49 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
     cargar();
   }
 
+  async function migrarAContactos(c: Cliente) {
+    if (c.contacto_derivado_id || migrandoId) return;
+    setMigrandoId(c.id);
+
+    const inmobiliaria = (c.empresa || c.nombre).trim();
+    const notasLineas = [
+      c.empresa ? `Contacto: ${c.nombre}` : null,
+      c.notas,
+    ].filter(Boolean);
+
+    const { data: contacto, error: insertError } = await supabase
+      .from("contactos")
+      .insert({
+        inmobiliaria,
+        email: c.email,
+        telefono: c.telefono,
+        notas: notasLineas.length > 0 ? notasLineas.join("\n") : null,
+        fuente: "Pruebas / Alianzas",
+      })
+      .select()
+      .single();
+
+    if (insertError || !contacto) {
+      alert("No se pudo migrar a Contactos: " + (insertError?.message ?? "error desconocido"));
+      setMigrandoId(null);
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("clientes")
+      .update({ contacto_derivado_id: contacto.id })
+      .eq("id", c.id);
+
+    if (updateError) {
+      alert("Se creó el contacto pero no se pudo marcar como migrado: " + updateError.message);
+    } else {
+      setClientes((prev) =>
+        prev.map((cl) => (cl.id === c.id ? { ...cl, contacto_derivado_id: contacto.id } : cl))
+      );
+    }
+    setMigrandoId(null);
+  }
+
   function diasParaVencer(fecha: string | null) {
     if (!fecha) return null;
     return Math.ceil((new Date(fecha).getTime() - now) / (1000 * 60 * 60 * 24));
@@ -162,7 +223,7 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
 
       <form
         onSubmit={agregar}
-        className="bg-white rounded-xl border p-4 grid grid-cols-1 md:grid-cols-5 gap-3"
+        className="bg-white rounded-xl border p-4 grid grid-cols-1 md:grid-cols-6 gap-3"
       >
         <input
           className="border rounded-lg px-3 py-2 text-sm"
@@ -183,6 +244,12 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
           value={nuevo.email}
           onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })}
         />
+        <input
+          className="border rounded-lg px-3 py-2 text-sm"
+          placeholder="Teléfono"
+          value={nuevo.telefono}
+          onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })}
+        />
         <select
           className="border rounded-lg px-3 py-2 text-sm"
           value={nuevo.tipo}
@@ -202,7 +269,7 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
         <button
           type="submit"
           disabled={guardando}
-          className="rounded-lg bg-brand-navy text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 md:col-span-5"
+          className="rounded-lg bg-brand-navy text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 md:col-span-6"
         >
           {guardando ? "Agregando..." : "+ Agregar cliente"}
         </button>
@@ -227,12 +294,13 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
               <th className="px-3 py-2">Empresa</th>
               <th className="px-3 py-2">Estado</th>
               <th className="px-3 py-2">Vencimiento</th>
+              <th className="px-3 py-2">Contactos</th>
             </tr>
           </thead>
           <tbody>
             {visibles.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-brand-gray">
+                <td colSpan={5} className="px-3 py-6 text-center text-brand-gray">
                   Sin clientes todavía.
                 </td>
               </tr>
@@ -270,6 +338,27 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
                       >
                         {dias < 0 ? "vencido" : `${dias}d`}
                       </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                    {c.contacto_derivado_id ? (
+                      <span
+                        title="Ya está en la lista general de Contactos"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700"
+                      >
+                        <CheckCircle2 size={14} />
+                        Migrado
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => migrarAContactos(c)}
+                        disabled={migrandoId === c.id}
+                        title="Enviar a la lista general de Contactos"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-navy hover:opacity-70 disabled:opacity-50"
+                      >
+                        <UserPlus size={14} />
+                        {migrandoId === c.id ? "Enviando..." : "Enviar a Contactos"}
+                      </button>
                     )}
                   </td>
                 </tr>
@@ -318,6 +407,12 @@ export default function ClientesClient({ initial }: { initial: Cliente[] }) {
                 placeholder="Email"
                 value={editForm.email}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+              <input
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="Teléfono"
+                value={editForm.telefono}
+                onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })}
               />
               <div className="grid grid-cols-2 gap-3">
                 <select
