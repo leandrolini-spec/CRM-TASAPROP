@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  UserCheck,
   ListChecks,
   Handshake,
   Wallet,
@@ -62,6 +63,7 @@ const NAV: NavEntry[] = [
       { label: "Gastos", href: "/gastos", icon: Receipt },
     ],
   },
+  { type: "link", label: "Usuarios", href: "/usuarios", icon: UserCheck },
   { type: "link", label: "Campañas", href: "/campanas", icon: Megaphone },
   { type: "link", label: "Calendario", href: "/calendario", icon: Calendar },
   { type: "link", label: "Datos de la Empresa", href: "/empresa", icon: Building2 },
