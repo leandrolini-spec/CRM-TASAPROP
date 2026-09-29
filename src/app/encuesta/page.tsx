@@ -21,7 +21,7 @@ export default async function EncuestaPage({
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-    const { data } = await supabase.rpc("buscar_nombre_usuario_app", {
+    const { data } = await supabase.rpc("buscar_nombre_encuestado", {
       p_email: email,
     });
     const fila = (data as { nombre: string | null }[] | null)?.[0];

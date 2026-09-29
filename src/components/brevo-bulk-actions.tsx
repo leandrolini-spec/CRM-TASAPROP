@@ -20,6 +20,7 @@ export default function BrevoBulkActions({
   const [listaId, setListaId] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [agregando, setAgregando] = useState(false);
+  const [enviandoEncuesta, setEnviandoEncuesta] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,6 +95,34 @@ export default function BrevoBulkActions({
     onDone();
   }
 
+  async function enviarEncuesta() {
+    if (
+      !confirm(
+        `¿Enviar la encuesta de retención a ${selectedIds.length} contacto(s)? Esto les manda un mail ahora mismo.`
+      )
+    )
+      return;
+    setEnviandoEncuesta(true);
+    setMensaje(null);
+    setError(null);
+    const res = await fetch("/api/contactos/encuesta/enviar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: selectedIds }),
+    });
+    const data = await res.json();
+    setEnviandoEncuesta(false);
+    if (!res.ok) {
+      setError(data.error ?? "No se pudo enviar la encuesta");
+      return;
+    }
+    setMensaje(
+      `Encuesta enviada a ${data.enviados} contacto(s).` +
+        (data.fallidos?.length ? ` ${data.fallidos.length} fallaron.` : "")
+    );
+    onDone();
+  }
+
   const inputClass =
     "rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-[#17184B] min-w-[180px]";
 
@@ -104,7 +133,23 @@ export default function BrevoBulkActions({
         {selectedIds.length === 1 ? "" : "s"} — elegí una acción de Brevo para aplicarles:
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white/10 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-white/90 uppercase tracking-wide">
+            Encuesta de retención
+          </p>
+          <p className="text-xs text-white/70">
+            La misma que ya se envió a Usuarios App.
+          </p>
+          <button
+            onClick={enviarEncuesta}
+            disabled={enviandoEncuesta}
+            className="shrink-0 rounded-lg bg-white text-[#17184B] text-sm font-medium px-3 py-1.5 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {enviandoEncuesta ? "Enviando..." : "Enviar encuesta"}
+          </button>
+        </div>
+
         <div className="bg-white/10 rounded-lg p-3 space-y-2">
           <p className="text-xs font-semibold text-white/90 uppercase tracking-wide">
             Enviar una plantilla ya armada

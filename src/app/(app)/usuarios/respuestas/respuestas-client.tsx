@@ -24,7 +24,12 @@ type Respuesta = {
   comentario: string | null;
   created_at: string;
   usuarios_app: { nombre: string | null } | null;
+  contactos: { inmobiliaria: string | null } | null;
 };
+
+function nombreDe(r: Respuesta) {
+  return r.usuarios_app?.nombre ?? r.contactos?.inmobiliaria ?? null;
+}
 
 export default function RespuestasClient({ initial }: { initial: Respuesta[] }) {
   const [abierta, setAbierta] = useState<Respuesta | null>(null);
@@ -66,7 +71,7 @@ export default function RespuestasClient({ initial }: { initial: Respuesta[] }) 
                 className="border-b last:border-0 cursor-pointer hover:bg-gray-50"
               >
                 <td className="px-3 py-2 font-medium">
-                  {r.usuarios_app?.nombre ?? "-"}
+                  {nombreDe(r) ?? "-"}
                 </td>
                 <td className="px-3 py-2 text-brand-gray">{r.email}</td>
                 <td className="px-3 py-2">{textoFrecuencia(r.frecuencia_uso)}</td>
@@ -94,7 +99,7 @@ export default function RespuestasClient({ initial }: { initial: Respuesta[] }) 
           >
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <h3 className="font-semibold text-brand-navy">
-                {abierta.usuarios_app?.nombre ?? abierta.email}
+                {nombreDe(abierta) ?? abierta.email}
               </h3>
               <button
                 onClick={() => setAbierta(null)}

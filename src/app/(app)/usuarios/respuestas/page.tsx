@@ -5,7 +5,7 @@ export default async function RespuestasEncuestaPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("encuesta_respuestas")
-    .select("*, usuarios_app(nombre)")
+    .select("*, usuarios_app(nombre), contactos(inmobiliaria)")
     .order("created_at", { ascending: false });
 
   return <RespuestasClient initial={data ?? []} />;

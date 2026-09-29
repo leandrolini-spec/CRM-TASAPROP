@@ -21,6 +21,8 @@ export type Contacto = {
   interesado: boolean | null;
   reunion: boolean;
   baja: boolean;
+  encuesta_enviada_at: string | null;
+  encuesta_respondida_at: string | null;
 };
 
 export default function ContactoModal({

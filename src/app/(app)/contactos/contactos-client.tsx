@@ -12,7 +12,8 @@ import { IconTrash, IconArchive, IconUserPlus } from "@/components/icons";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Check } from "lucide-react";
+import { Check, MessageSquareText } from "lucide-react";
+import Link from "next/link";
 
 export default function ContactosClient({
   initial,
@@ -136,6 +137,7 @@ export default function ContactosClient({
     });
   }
 
+  const respondieronEncuesta = contactos.filter((c) => c.encuesta_respondida_at).length;
   const archivados = contactos.filter((c) => c.archivado);
   // "Completo" = tiene email y teléfono. Los incompletos no entran a la lista
   // activa por defecto (mismo criterio que se usa para decidir a quién se le
@@ -176,6 +178,13 @@ export default function ContactosClient({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/usuarios/respuestas"
+            className="inline-flex items-center gap-1.5 rounded-lg border text-sm font-medium px-3 py-2 text-brand-navy hover:bg-gray-50"
+          >
+            <MessageSquareText size={15} />
+            Ver respuestas ({respondieronEncuesta})
+          </Link>
           <ResyncBrevoButton />
           <ImportExportButtons entity="contactos" onImported={cargar} />
         </div>
@@ -318,13 +327,14 @@ export default function ContactosClient({
               </th>
               <th className="px-3 py-2">Inmobiliaria</th>
               <th className="px-3 py-2">Contacto</th>
+              <th className="px-3 py-2">Encuesta</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {visibles.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-brand-gray">
+                <td colSpan={5} className="px-3 py-6 text-center text-brand-gray">
                   Sin contactos.
                 </td>
               </tr>
@@ -362,6 +372,15 @@ export default function ContactosClient({
                     instagram={c.instagram}
                     web={c.web}
                   />
+                </td>
+                <td className="px-3 py-2">
+                  {c.encuesta_respondida_at ? (
+                    <Badge tone="green">Respondió</Badge>
+                  ) : c.encuesta_enviada_at ? (
+                    <Badge tone="gray">Enviada</Badge>
+                  ) : (
+                    <span className="text-xs text-brand-gray">Sin enviar</span>
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   <span className="inline-flex items-center gap-3 justify-end w-full">
