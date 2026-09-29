@@ -60,7 +60,13 @@ export async function POST(req: NextRequest) {
   for (const usuario of destinatarios) {
     try {
       await upsertContact({ email: usuario.email });
-      await addContactsToList(listaId, [usuario.email]);
+      try {
+        // "Ya está en la lista" no es un error real — Brevo devuelve 400 en
+        // ese caso en vez de ser un no-op. No tiene que frenar el envío.
+        await addContactsToList(listaId, [usuario.email]);
+      } catch {
+        // seguimos igual
+      }
 
       const unsubscribeUrl = `${siteUrl}/baja?email=${encodeURIComponent(usuario.email)}`;
       const encuestaUrl = `${siteUrl}/encuesta?email=${encodeURIComponent(usuario.email)}`;
