@@ -79,8 +79,10 @@ export async function POST(req: NextRequest) {
         .replaceAll("{UNSUB_URL}", unsubscribeUrl),
       unsubscribeUrl,
     });
-  } catch {
-    // La respuesta ya se guardó — el agradecimiento es secundario.
+  } catch (err) {
+    // La respuesta ya se guardó — el agradecimiento es secundario, pero
+    // logueamos para poder diagnosticar si Brevo empieza a fallar.
+    console.error("No se pudo enviar el agradecimiento de la encuesta:", err);
   }
 
   return NextResponse.json({ ok: true });
