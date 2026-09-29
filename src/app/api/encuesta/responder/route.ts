@@ -83,10 +83,6 @@ export async function POST(req: NextRequest) {
     // La respuesta ya se guardó — el agradecimiento es secundario, pero
     // logueamos para poder diagnosticar si Brevo empieza a fallar.
     console.error("No se pudo enviar el agradecimiento de la encuesta:", err);
-    return NextResponse.json({
-      ok: true,
-      graciasError: err instanceof Error ? err.message : String(err),
-    });
   }
 
   return NextResponse.json({ ok: true });
