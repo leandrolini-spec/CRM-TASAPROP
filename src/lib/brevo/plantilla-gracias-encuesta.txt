@@ -1,0 +1,12 @@
+Asunto: ¡Gracias por tu respuesta!
+
+Hola{NOMBRE_SALUDO}, gracias por completar la encuesta — tu opinión nos ayuda un montón a mejorar TasaProp.
+
+{MENSAJE_SIGUIENTE_PASO}
+
+Gracias,
+Equipo de Tasaprop
+info@tasaprop.com - www.tasaprop.com
+
+---
+Te escribimos porque tenés una cuenta registrada en TasaProp. Si no querés recibir más correos, date de baja acá: {UNSUB_URL}

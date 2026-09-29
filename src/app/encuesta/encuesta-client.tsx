@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/Button";
 import {
   FRECUENCIA_OPCIONES,
@@ -20,11 +19,6 @@ export default function EncuestaClient({
   emailInicial: string | null;
   nombreInicial: string | null;
 }) {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const pasos: Paso[] = emailInicial
     ? ["frecuencia", "motivo", "precio", "tasacion", "final"]
     : ["email", "frecuencia", "motivo", "precio", "tasacion", "final"];
@@ -74,19 +68,23 @@ export default function EncuestaClient({
   async function enviar() {
     setEnviando(true);
     setError(null);
-    const { error } = await supabase.rpc("guardar_respuesta_encuesta", {
-      p_email: email.trim(),
-      p_frecuencia_uso: frecuencia,
-      p_motivo_abandono: motivo,
-      p_motivo_otro: motivo.includes("otro") ? motivoOtro || null : null,
-      p_percepcion_precio: precio,
-      p_precio_dispuesto: precioDispuesto || null,
-      p_tasacion_precision: tasacion,
-      p_whatsapp: whatsapp || null,
-      p_comentario: comentario || null,
+    const res = await fetch("/api/encuesta/responder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.trim(),
+        frecuencia_uso: frecuencia,
+        motivo_abandono: motivo,
+        motivo_otro: motivo.includes("otro") ? motivoOtro || null : null,
+        percepcion_precio: precio,
+        precio_dispuesto: precioDispuesto || null,
+        tasacion_precision: tasacion,
+        whatsapp: whatsapp || null,
+        comentario: comentario || null,
+      }),
     });
     setEnviando(false);
-    if (error) {
+    if (!res.ok) {
       setError("No se pudo enviar. Probá de nuevo en un momento.");
       return;
     }
