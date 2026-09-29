@@ -9,6 +9,7 @@ function siteIsGated(request: NextRequest) {
   return (
     !request.nextUrl.pathname.startsWith("/baja") &&
     !request.nextUrl.pathname.startsWith("/encuesta") &&
+    !request.nextUrl.pathname.startsWith("/api/encuesta/") &&
     !request.nextUrl.pathname.startsWith("/api/webhooks/")
   );
 }
@@ -73,6 +74,7 @@ export async function updateSession(request: NextRequest) {
     isLoginPage ||
     request.nextUrl.pathname.startsWith("/baja") ||
     request.nextUrl.pathname.startsWith("/encuesta") ||
+    request.nextUrl.pathname.startsWith("/api/encuesta/") ||
     request.nextUrl.pathname.startsWith("/api/webhooks/");
 
   if (!user && !isPublicPath) {
