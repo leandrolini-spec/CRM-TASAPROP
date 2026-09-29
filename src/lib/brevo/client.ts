@@ -94,6 +94,17 @@ export async function getLists() {
   return brevoFetch("/contacts/lists?limit=50&sort=desc", { method: "GET" });
 }
 
+export async function createList(name: string, folderId: number) {
+  return brevoFetch("/contacts/lists", {
+    method: "POST",
+    body: JSON.stringify({ name, folderId }),
+  });
+}
+
+export async function getFolders() {
+  return brevoFetch("/contacts/folders?limit=50", { method: "GET" });
+}
+
 export async function addContactsToList(listId: number, emails: string[]) {
   return brevoFetch(`/contacts/lists/${listId}/contacts/add`, {
     method: "POST",
@@ -121,6 +132,30 @@ export async function getListContacts(listId: number) {
 export async function getContactWithStats(email: string) {
   return brevoFetch(`/contacts/${encodeURIComponent(email)}`, {
     method: "GET",
+  });
+}
+
+export async function sendEncuestaEmail(params: {
+  to: string;
+  nombre: string | null;
+  subject: string;
+  html: string;
+  text: string;
+  unsubscribeUrl: string;
+}) {
+  return brevoFetch("/smtp/email", {
+    method: "POST",
+    body: JSON.stringify({
+      sender: REMITENTE,
+      to: [{ email: params.to, name: params.nombre ?? undefined }],
+      subject: params.subject,
+      htmlContent: params.html,
+      textContent: params.text,
+      headers: {
+        "List-Unsubscribe": `<${params.unsubscribeUrl}>, <mailto:info@tasaprop.com?subject=Baja>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    }),
   });
 }
 

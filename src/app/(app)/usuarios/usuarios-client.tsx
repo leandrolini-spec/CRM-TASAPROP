@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Circle } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Circle, Send, MessageSquareText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { formatFechaCorta } from "@/lib/date";
 
 type UsuarioApp = {
   id: string;
@@ -11,6 +13,9 @@ type UsuarioApp = {
   contactado: boolean;
   notas: string | null;
   created_at: string;
+  encuesta_enviada_at: string | null;
+  encuesta_respondida_at: string | null;
+  baja: boolean;
 };
 
 export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
@@ -18,6 +23,8 @@ export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
   const [usuarios, setUsuarios] = useState<UsuarioApp[]>(initial);
   const [filtro, setFiltro] = useState("");
   const [verContactados, setVerContactados] = useState<"" | "si" | "no">("");
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [enviando, setEnviando] = useState(false);
 
   async function toggleContactado(u: UsuarioApp) {
     const valor = !u.contactado;
@@ -36,7 +43,54 @@ export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
     }
   }
 
+  function toggleSeleccion(id: string) {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function enviarEncuesta() {
+    if (seleccionados.size === 0) return;
+    if (
+      !confirm(
+        `¿Mandar la encuesta a ${seleccionados.size} usuario${seleccionados.size === 1 ? "" : "s"} por mail?`
+      )
+    )
+      return;
+    setEnviando(true);
+    try {
+      const res = await fetch("/api/usuarios/encuesta/enviar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...seleccionados] }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert("No se pudo enviar: " + (data.error ?? "error desconocido"));
+        return;
+      }
+      const ahora = new Date().toISOString();
+      setUsuarios((prev) =>
+        prev.map((u) =>
+          seleccionados.has(u.id) ? { ...u, encuesta_enviada_at: ahora } : u
+        )
+      );
+      setSeleccionados(new Set());
+      let mensaje = `Se mandó la encuesta a ${data.enviados} usuario${data.enviados === 1 ? "" : "s"}.`;
+      if (data.fallidos?.length) {
+        mensaje += ` ${data.fallidos.length} fallaron: ${data.fallidos.map((f: { email: string }) => f.email).join(", ")}`;
+      }
+      alert(mensaje);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   const contactados = usuarios.filter((u) => u.contactado).length;
+  const respondieron = usuarios.filter((u) => u.encuesta_respondida_at).length;
 
   const visibles = usuarios.filter((u) => {
     if (verContactados === "si" && !u.contactado) return false;
@@ -50,22 +104,36 @@ export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
     return true;
   });
 
+  const idsVisibles = visibles.map((u) => u.id);
+  const todosVisiblesSeleccionados =
+    idsVisibles.length > 0 && idsVisibles.every((id) => seleccionados.has(id));
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-brand-navy">Usuarios</h1>
           <p className="text-sm text-brand-gray">
-            Todas las cuentas registradas en la app de TasaProp — {usuarios.length}{" "}
-            en total, {contactados} contactados.
+            Todas las cuentas registradas en la app de TasaProp —{" "}
+            {usuarios.length} en total, {contactados} contactados,{" "}
+            {respondieron} respondieron la encuesta.
           </p>
         </div>
-        <a
-          href="/api/usuarios/export"
-          className="rounded-lg border text-sm font-medium px-3 py-2 text-brand-navy hover:bg-gray-50"
-        >
-          Exportar Excel
-        </a>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/usuarios/respuestas"
+            className="inline-flex items-center gap-1.5 rounded-lg border text-sm font-medium px-3 py-2 text-brand-navy hover:bg-gray-50"
+          >
+            <MessageSquareText size={15} />
+            Ver respuestas ({respondieron})
+          </Link>
+          <a
+            href="/api/usuarios/export"
+            className="rounded-lg border text-sm font-medium px-3 py-2 text-brand-navy hover:bg-gray-50"
+          >
+            Exportar Excel
+          </a>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -92,27 +160,87 @@ export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
         </div>
       </div>
 
+      {seleccionados.size > 0 && (
+        <div className="bg-brand-navy rounded-xl p-3 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-white">
+            {seleccionados.size} seleccionado{seleccionados.size === 1 ? "" : "s"}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={enviarEncuesta}
+              disabled={enviando}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white text-brand-navy text-sm font-medium px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
+            >
+              <Send size={14} />
+              {enviando ? "Enviando..." : "Enviar encuesta"}
+            </button>
+            <button
+              onClick={() => setSeleccionados(new Set())}
+              className="text-sm text-white/70 hover:text-white"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-brand-gray border-b">
+              <th className="px-3 py-2 w-8">
+                <input
+                  type="checkbox"
+                  checked={todosVisiblesSeleccionados}
+                  onChange={(e) => {
+                    setSeleccionados((prev) => {
+                      const next = new Set(prev);
+                      if (e.target.checked) idsVisibles.forEach((id) => next.add(id));
+                      else idsVisibles.forEach((id) => next.delete(id));
+                      return next;
+                    });
+                  }}
+                  title="Seleccionar todos (para mandar la encuesta)"
+                />
+              </th>
               <th className="px-3 py-2">Nombre</th>
               <th className="px-3 py-2">Email</th>
+              <th className="px-3 py-2">Encuesta</th>
               <th className="px-3 py-2">Contactado</th>
             </tr>
           </thead>
           <tbody>
             {visibles.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-3 py-6 text-center text-brand-gray">
+                <td colSpan={5} className="px-3 py-6 text-center text-brand-gray">
                   Sin usuarios que coincidan.
                 </td>
               </tr>
             )}
             {visibles.map((u) => (
               <tr key={u.id} className="border-b last:border-0">
+                <td className="px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={seleccionados.has(u.id)}
+                    onChange={() => toggleSeleccion(u.id)}
+                  />
+                </td>
                 <td className="px-3 py-2 font-medium">{u.nombre ?? "-"}</td>
                 <td className="px-3 py-2 text-brand-gray">{u.email}</td>
+                <td className="px-3 py-2 text-xs">
+                  {u.encuesta_respondida_at ? (
+                    <span className="text-green-700 font-medium">
+                      Respondió {formatFechaCorta(u.encuesta_respondida_at.slice(0, 10))}
+                    </span>
+                  ) : u.encuesta_enviada_at ? (
+                    <span className="text-brand-gray">
+                      Enviada {formatFechaCorta(u.encuesta_enviada_at.slice(0, 10))}
+                    </span>
+                  ) : (
+                    <span className="text-gray-300">Sin enviar</span>
+                  )}
+                </td>
                 <td className="px-3 py-2">
                   <button
                     onClick={() => toggleContactado(u)}

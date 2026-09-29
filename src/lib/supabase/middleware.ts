@@ -8,6 +8,7 @@ function siteIsGated(request: NextRequest) {
   // las llama gente externa (destinatarios de mail, o el propio Brevo).
   return (
     !request.nextUrl.pathname.startsWith("/baja") &&
+    !request.nextUrl.pathname.startsWith("/encuesta") &&
     !request.nextUrl.pathname.startsWith("/api/webhooks/")
   );
 }
@@ -71,6 +72,7 @@ export async function updateSession(request: NextRequest) {
   const isPublicPath =
     isLoginPage ||
     request.nextUrl.pathname.startsWith("/baja") ||
+    request.nextUrl.pathname.startsWith("/encuesta") ||
     request.nextUrl.pathname.startsWith("/api/webhooks/");
 
   if (!user && !isPublicPath) {

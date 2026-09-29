@@ -22,6 +22,7 @@ import {
   ChevronsRight,
   Menu,
   LogOut,
+  MessageSquareText,
 } from "lucide-react";
 import MailBell from "@/components/mail-bell";
 import { createClient } from "@/lib/supabase/client";
@@ -63,7 +64,13 @@ const NAV: NavEntry[] = [
       { label: "Gastos", href: "/gastos", icon: Receipt },
     ],
   },
-  { type: "link", label: "Usuarios", href: "/usuarios", icon: UserCheck },
+  {
+    type: "group",
+    label: "Usuarios",
+    href: "/usuarios",
+    icon: UserCheck,
+    items: [{ label: "Respuestas encuesta", href: "/usuarios/respuestas", icon: MessageSquareText }],
+  },
   { type: "link", label: "Campañas", href: "/campanas", icon: Megaphone },
   { type: "link", label: "Calendario", href: "/calendario", icon: Calendar },
   { type: "link", label: "Datos de la Empresa", href: "/empresa", icon: Building2 },

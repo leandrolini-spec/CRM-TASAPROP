@@ -1,0 +1,14 @@
+Asunto: ¿Nos contás qué te pareció TasaProp?
+
+Hola{NOMBRE_SALUDO}, queremos mejorar TasaProp y tu opinión nos sirve muchísimo. Son 6 preguntas, te lleva menos de 2 minutos desde el celular.
+
+A cambio, te regalamos una semana de prueba gratis.
+
+Responder la encuesta: {ENCUESTA_URL}
+
+Gracias,
+Leandro Lini - Gerente Comercial, Tasaprop
+info@tasaprop.com - www.tasaprop.com
+
+---
+Te escribimos porque tenés una cuenta registrada en TasaProp. Si no querés recibir más correos, date de baja acá: {UNSUB_URL}

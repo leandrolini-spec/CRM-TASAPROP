@@ -9,7 +9,13 @@ async function darDeBaja(email: string | null) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-  await supabase.rpc("baja_contacto", { p_email: email });
+  // El mismo link de baja se usa para destinatarios de contactos (agencias)
+  // y de usuarios_app (usuarios de la app) — no sabemos de cuál viene, así
+  // que se intenta en las dos; la que no tenga ese email no hace nada.
+  await Promise.all([
+    supabase.rpc("baja_contacto", { p_email: email }),
+    supabase.rpc("baja_usuario_app", { p_email: email }),
+  ]);
 }
 
 const HTML = `<!DOCTYPE html>
