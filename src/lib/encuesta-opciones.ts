@@ -6,13 +6,13 @@ export const FRECUENCIA_OPCIONES = [
 ];
 
 export const MOTIVO_OPCIONES = [
-  { valor: "precio", texto: "El precio no me cerraba" },
+  { valor: "precio", texto: "El precio no me cerró" },
   { valor: "tasacion", texto: "La tasación no coincidió con lo que esperaba del mercado" },
   { valor: "no_entendi", texto: "No entendí bien cómo usarla o leer el resultado" },
-  { valor: "tecnico", texto: "Tuve problemas técnicos (errores, lentitud)" },
+  { valor: "tecnico", texto: "Problemas técnicos (errores, lentitud)" },
   { valor: "faltan_funciones", texto: "Me faltó alguna función que necesito" },
-  { valor: "sin_motivo", texto: "Se me pasó, no fue por algo puntual" },
-  { valor: "sin_quejas", texto: "La sigo usando, no tengo quejas" },
+  { valor: "sin_motivo", texto: "Nada en particular, simplemente no volví a usarla" },
+  { valor: "sin_quejas", texto: "Ningún problema, todo bien" },
   { valor: "otro", texto: "Otro" },
 ];
 

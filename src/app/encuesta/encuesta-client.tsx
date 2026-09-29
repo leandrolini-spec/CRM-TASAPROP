@@ -94,10 +94,10 @@ export default function EncuestaClient({
   }
 
   const opcionClase = (activo: boolean) =>
-    `w-full text-left rounded-lg border px-4 py-3 text-sm transition ${
+    `w-full text-left rounded-lg border px-4 py-3 text-base font-medium transition ${
       activo
         ? "border-brand-navy bg-brand-navy text-white"
-        : "border-gray-300 hover:border-brand-navy/50 hover:bg-gray-50"
+        : "border-gray-300 text-brand-ink hover:border-brand-navy/50 hover:bg-gray-50"
     }`;
 
   return (
@@ -134,7 +134,7 @@ export default function EncuestaClient({
             </div>
 
             {nombreInicial && pasoIdx === 0 && (
-              <p className="text-sm text-brand-gray mb-4 text-center">
+              <p className="text-base text-brand-ink mb-4 text-center">
                 Hola {nombreInicial.split(" ")[0]} — esto te va a llevar menos de
                 2 minutos, y a cambio te regalamos una semana de prueba gratis.
               </p>
@@ -142,7 +142,7 @@ export default function EncuestaClient({
 
             {paso === "email" && (
               <div className="space-y-3">
-                <h2 className="text-base font-semibold text-brand-navy">
+                <h2 className="text-xl font-bold text-brand-navy">
                   Antes de arrancar, ¿cuál es tu email?
                 </h2>
                 <input
@@ -158,7 +158,7 @@ export default function EncuestaClient({
 
             {paso === "frecuencia" && (
               <div className="space-y-3">
-                <h2 className="text-base font-semibold text-brand-navy">
+                <h2 className="text-xl font-bold text-brand-navy">
                   ¿Con qué frecuencia usás TasaProp?
                 </h2>
                 <div className="space-y-2">
@@ -178,10 +178,10 @@ export default function EncuestaClient({
 
             {paso === "motivo" && (
               <div className="space-y-3">
-                <h2 className="text-base font-semibold text-brand-navy">
-                  ¿Qué fue lo que más te alejó de seguir usándola?
+                <h2 className="text-xl font-bold text-brand-navy">
+                  ¿Tuviste algún problema al usar la app?
                 </h2>
-                <p className="text-xs text-brand-gray">Podés elegir más de una.</p>
+                <p className="text-sm text-brand-gray">Podés elegir más de una.</p>
                 <div className="space-y-2">
                   {MOTIVO_OPCIONES.map((op) => (
                     <button
@@ -208,7 +208,7 @@ export default function EncuestaClient({
 
             {paso === "precio" && (
               <div className="space-y-3">
-                <h2 className="text-base font-semibold text-brand-navy">
+                <h2 className="text-xl font-bold text-brand-navy">
                   ¿Te pareció caro, justo o barato el precio actual?
                 </h2>
                 <div className="space-y-2">
@@ -235,7 +235,7 @@ export default function EncuestaClient({
 
             {paso === "tasacion" && (
               <div className="space-y-3">
-                <h2 className="text-base font-semibold text-brand-navy">
+                <h2 className="text-xl font-bold text-brand-navy">
                   ¿El valor que te dio se acercó a lo que esperabas del mercado?
                 </h2>
                 <div className="space-y-2">
@@ -256,10 +256,10 @@ export default function EncuestaClient({
             {paso === "final" && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <h2 className="text-base font-semibold text-brand-navy">
+                  <h2 className="text-xl font-bold text-brand-navy">
                     ¿Qué cambiarías para usarla más seguido?
                   </h2>
-                  <p className="text-xs text-brand-gray">Opcional.</p>
+                  <p className="text-sm text-brand-gray">Opcional.</p>
                   <textarea
                     value={comentario}
                     onChange={(e) => setComentario(e.target.value)}
@@ -268,10 +268,10 @@ export default function EncuestaClient({
                   />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-base font-semibold text-brand-navy">
+                  <h2 className="text-xl font-bold text-brand-navy">
                     Dejanos tu WhatsApp
                   </h2>
-                  <p className="text-xs text-brand-gray">
+                  <p className="text-sm text-brand-gray">
                     Opcional — para avisarte más rápido cuando esté activa tu
                     semana gratis.
                   </p>
