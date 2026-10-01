@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Circle, Send, MessageSquareText } from "lucide-react";
+import { CheckCircle2, Circle, Send, MessageSquareText, Gift } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatFechaCorta } from "@/lib/date";
 
@@ -16,6 +16,8 @@ type UsuarioApp = {
   encuesta_enviada_at: string | null;
   encuesta_respondida_at: string | null;
   baja: boolean;
+  prueba_activada_at: string | null;
+  prueba_vence_at: string | null;
 };
 
 export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
@@ -86,6 +88,39 @@ export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
       alert(mensaje);
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function activarPrueba(u: UsuarioApp) {
+    const diasTexto = prompt(
+      `¿Cuántos días de prueba gratis le activamos a ${u.nombre ?? u.email}?`,
+      "7"
+    );
+    if (diasTexto === null) return;
+    const dias = Number(diasTexto);
+    if (!Number.isFinite(dias) || dias <= 0) {
+      alert("Cantidad de días inválida.");
+      return;
+    }
+    const res = await fetch("/api/prueba-gratis/activar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo: "usuario", id: u.id, dias }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert("No se pudo activar la prueba: " + (data.error ?? "error desconocido"));
+      return;
+    }
+    setUsuarios((prev) =>
+      prev.map((x) =>
+        x.id === u.id
+          ? { ...x, prueba_activada_at: new Date().toISOString(), prueba_vence_at: data.venceAt }
+          : x
+      )
+    );
+    if (data.mailError) {
+      alert("Prueba activada, pero " + data.mailError);
     }
   }
 
@@ -206,13 +241,14 @@ export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
               <th className="px-3 py-2">Nombre</th>
               <th className="px-3 py-2">Email</th>
               <th className="px-3 py-2">Encuesta</th>
+              <th className="px-3 py-2">Prueba gratis</th>
               <th className="px-3 py-2">Contactado</th>
             </tr>
           </thead>
           <tbody>
             {visibles.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-brand-gray">
+                <td colSpan={6} className="px-3 py-6 text-center text-brand-gray">
                   Sin usuarios que coincidan.
                 </td>
               </tr>
@@ -239,6 +275,37 @@ export default function UsuariosClient({ initial }: { initial: UsuarioApp[] }) {
                     </span>
                   ) : (
                     <span className="text-gray-300">Sin enviar</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-xs">
+                  {u.prueba_vence_at ? (
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={
+                          new Date(u.prueba_vence_at) > new Date()
+                            ? "text-green-700 font-medium"
+                            : "text-brand-gray"
+                        }
+                      >
+                        {new Date(u.prueba_vence_at) > new Date() ? "Activa hasta" : "Venció"}{" "}
+                        {formatFechaCorta(u.prueba_vence_at.slice(0, 10))}
+                      </span>
+                      <button
+                        onClick={() => activarPrueba(u)}
+                        title="Reactivar / renovar prueba"
+                        className="text-brand-gray hover:text-brand-navy"
+                      >
+                        <Gift size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => activarPrueba(u)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1 bg-gray-100 text-brand-gray hover:bg-brand-cyan/15 hover:text-brand-navy transition"
+                    >
+                      <Gift size={14} />
+                      Activar prueba
+                    </button>
                   )}
                 </td>
                 <td className="px-3 py-2">

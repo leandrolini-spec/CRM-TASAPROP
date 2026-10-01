@@ -1,0 +1,12 @@
+Asunto: ¡Tu semana de prueba gratis ya está activa!
+
+Hola{NOMBRE_SALUDO}, te activamos la prueba gratis de TasaProp que te prometimos. Ya podés usar todas las funciones sin restricciones.
+
+Tu prueba vence el {FECHA_VENCIMIENTO}.
+
+Gracias,
+Equipo de Tasaprop
+info@tasaprop.com - www.tasaprop.com
+
+---
+Te escribimos porque tenés una cuenta registrada en TasaProp. Si no querés recibir más correos, date de baja acá: {UNSUB_URL}

@@ -23,6 +23,8 @@ export type Contacto = {
   baja: boolean;
   encuesta_enviada_at: string | null;
   encuesta_respondida_at: string | null;
+  prueba_activada_at: string | null;
+  prueba_vence_at: string | null;
 };
 
 export default function ContactoModal({
