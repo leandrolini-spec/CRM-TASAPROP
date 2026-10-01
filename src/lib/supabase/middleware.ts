@@ -10,7 +10,8 @@ function siteIsGated(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/baja") &&
     !request.nextUrl.pathname.startsWith("/encuesta") &&
     !request.nextUrl.pathname.startsWith("/api/encuesta/") &&
-    !request.nextUrl.pathname.startsWith("/api/webhooks/")
+    !request.nextUrl.pathname.startsWith("/api/webhooks/") &&
+    !request.nextUrl.pathname.startsWith("/api/cron/")
   );
 }
 
@@ -75,7 +76,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/baja") ||
     request.nextUrl.pathname.startsWith("/encuesta") ||
     request.nextUrl.pathname.startsWith("/api/encuesta/") ||
-    request.nextUrl.pathname.startsWith("/api/webhooks/");
+    request.nextUrl.pathname.startsWith("/api/webhooks/") ||
+    request.nextUrl.pathname.startsWith("/api/cron/");
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
