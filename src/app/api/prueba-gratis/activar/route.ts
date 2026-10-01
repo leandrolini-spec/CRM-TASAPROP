@@ -3,7 +3,11 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { createClient } from "@/lib/supabase/server";
 import { sendEncuestaEmail } from "@/lib/brevo/client";
-import { formatFechaCorta } from "@/lib/date";
+
+function formatFechaLarga(fechaISO: string): string {
+  const [anio, mes, dia] = fechaISO.split("-").map(Number);
+  return `${dia}/${mes}/${anio}`;
+}
 
 const ASUNTO = "¡Tu semana de prueba gratis ya está activa!";
 
@@ -65,7 +69,7 @@ export async function POST(req: NextRequest) {
     const unsubscribeUrl = `${siteUrl}/baja?email=${encodeURIComponent(email)}`;
     const primerNombre = nombre ? nombre.split(" ")[0] : null;
     const saludo = primerNombre ? `, ${primerNombre}` : "";
-    const fechaVencimiento = formatFechaCorta(venceAt.toISOString().slice(0, 10));
+    const fechaVencimiento = formatFechaLarga(venceAt.toISOString().slice(0, 10));
 
     await sendEncuestaEmail({
       to: email,
